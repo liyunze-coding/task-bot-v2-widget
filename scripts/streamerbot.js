@@ -145,6 +145,10 @@ function onCustom(payload) {
 		case "admindelete":
 			taskList.removeSection(body.id);
 			break;
+		case "import":
+			console.log("HERE");
+			handleImportEvent();
+			break;
 		default:
 			break;
 	}
