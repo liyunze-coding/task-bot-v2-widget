@@ -103,6 +103,10 @@ body {
 	width: fit-content;
 }
 
+.section-title.has-user-color {
+    color: var(--user-color); /*auto user color*/
+}
+
 .task.done,
 .task.focused.done {
 	text-decoration: line-through;

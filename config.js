@@ -1,9 +1,9 @@
 "use strict";
 
 const configs = (function () {
-	const StreamerBotSettings = {
+	const streamerBotSettings = {
 		host: "127.0.0.1",
-		port: 8080,
+		port: 6968,
 		endpoint: "/",
 	};
 
@@ -17,8 +17,18 @@ const configs = (function () {
 		"!clearmydone",
 	];
 
+	const twitchSettings = {
+		autoUserColor: true
+	}
+
+	const kickSettings = {
+		autouserColor: true
+	}
+
 	return {
-		StreamerBotSettings,
+		streamerBotSettings,
 		commands,
+		twitchSettings,
+		kickSettings
 	};
 })();

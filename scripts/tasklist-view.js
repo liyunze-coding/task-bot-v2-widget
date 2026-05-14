@@ -21,6 +21,47 @@ class TaskList {
 	#ANIM_DURATION = 400;
 	#ANIM_EASING = "cubic-bezier(0.22, 1, 0.36, 1)";
 
+	#parseHexColor(hex) {
+		if (typeof hex !== "string") return null;
+		const s = hex.trim();
+		const m = /^#?([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(s);
+		if (!m) return null;
+		let h = m[1].toLowerCase();
+		if (h.length === 3) {
+			h = h
+				.split("")
+				.map((c) => c + c)
+				.join("");
+		}
+		const r = parseInt(h.slice(0, 2), 16);
+		const g = parseInt(h.slice(2, 4), 16);
+		const b = parseInt(h.slice(4, 6), 16);
+		return { r, g, b };
+	}
+
+	#relativeLuminance({ r, g, b }) {
+		const toLinear = (v) => {
+			const s = v / 255;
+			return s <= 0.04045
+				? s / 12.92
+				: Math.pow((s + 0.055) / 1.055, 2.4);
+		};
+		const R = toLinear(r);
+		const G = toLinear(g);
+		const B = toLinear(b);
+		return 0.2126 * R + 0.7152 * G + 0.0722 * B;
+	}
+
+	#ensureNotDarkerThan(userHex, minHex = "#555555", fallbackHex = "#ffffff") {
+		const userRgb = this.#parseHexColor(userHex);
+		const minRgb = this.#parseHexColor(minHex);
+		if (!userRgb || !minRgb) return userHex;
+		return this.#relativeLuminance(userRgb) <
+			this.#relativeLuminance(minRgb)
+			? fallbackHex
+			: userHex;
+	}
+
 	constructor(container) {
 		const el =
 			typeof container === "string"
@@ -87,7 +128,7 @@ class TaskList {
 		return this;
 	}
 
-	editTask(sectionId, taskIndex, newText) {
+	editTask(sectionId, taskIndex, newText, userColor) {
 		return this.updateSection(sectionId, (s) => {
 			if (s.tasks[taskIndex]) {
 				s.tasks[taskIndex].text = newText;
@@ -292,6 +333,14 @@ class TaskList {
 			const t = document.createElement("div");
 			t.className = "section-title";
 			t.textContent = section.title;
+			let color =
+				section.color ?? localStorage.getItem(`${section.id}-color`);
+			if (configs.twitchSettings.autoUserColor && color) {
+				color = this.#ensureNotDarkerThan(color, "#888888", "#ffffff");
+				t.style.setProperty("--user-color", color);
+				t.classList.add("has-user-color");
+			}
+
 			div.appendChild(t);
 		}
 		section.tasks.forEach((task, i) =>
@@ -321,6 +370,20 @@ class TaskList {
 					el.querySelector("span:last-child").textContent = task.text;
 				}
 				el.querySelector(".task-number").textContent = `${i + 1}.`;
+
+				// Update color if changed
+				if (task.color) {
+					const safe = this.#ensureNotDarkerThan(
+						task.color,
+						"#555555",
+						"#ffffff",
+					);
+					el.style.setProperty("--user-color", safe);
+					el.classList.add("has-user-color");
+				} else {
+					el.style.removeProperty("--user-color");
+					el.classList.remove("has-user-color");
+				}
 			} else {
 				const newEl = this.#createTaskEl(task, i);
 				sectionEl.appendChild(newEl);
