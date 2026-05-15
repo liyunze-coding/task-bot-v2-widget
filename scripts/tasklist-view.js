@@ -52,16 +52,6 @@ class TaskList {
 		return 0.2126 * R + 0.7152 * G + 0.0722 * B;
 	}
 
-	#ensureNotDarkerThan(userHex, minHex = "#555555", fallbackHex = "#ffffff") {
-		const userRgb = this.#parseHexColor(userHex);
-		const minRgb = this.#parseHexColor(minHex);
-		if (!userRgb || !minRgb) return userHex;
-		return this.#relativeLuminance(userRgb) <
-			this.#relativeLuminance(minRgb)
-			? fallbackHex
-			: userHex;
-	}
-
 	constructor(container) {
 		const el =
 			typeof container === "string"
@@ -335,8 +325,7 @@ class TaskList {
 			t.textContent = section.title;
 			let color =
 				section.color ?? localStorage.getItem(`${section.id}-color`);
-			if (configs.twitchSettings.autoUserColor && color) {
-				color = this.#ensureNotDarkerThan(color, "#888888", "#ffffff");
+			if (configs.twitchSettings.autoUserColor && color != undefined && color != "undefined" && color != null) {
 				t.style.setProperty("--user-color", color);
 				t.classList.add("has-user-color");
 			}
@@ -372,13 +361,8 @@ class TaskList {
 				el.querySelector(".task-number").textContent = `${i + 1}.`;
 
 				// Update color if changed
-				if (task.color) {
-					const safe = this.#ensureNotDarkerThan(
-						task.color,
-						"#555555",
-						"#ffffff",
-					);
-					el.style.setProperty("--user-color", safe);
+				if (task.color != undefined && task.color != "undefined") {
+					el.style.setProperty("--user-color", task.color);
 					el.classList.add("has-user-color");
 				} else {
 					el.style.removeProperty("--user-color");

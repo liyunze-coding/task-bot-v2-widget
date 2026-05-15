@@ -1,85 +1,82 @@
 // STREAMER.BOT SETTINGS
 
 const client = new StreamerbotClient({
-    host: configs.streamerBotSettings.host,
-    port: configs.streamerBotSettings.port,
-    endpoint: configs.streamerBotSettings.endpoint,
-    onConnect: onConnect,
-    onDisconnect: onDisconnect,
-    onError: onError,
+	host: configs.streamerBotSettings.host,
+	port: configs.streamerBotSettings.port,
+	endpoint: configs.streamerBotSettings.endpoint,
+	onConnect: onConnect,
+	onDisconnect: onDisconnect,
+	onError: onError,
 });
+
+function getAllLocalstorage() {
+	const allLocalStorage = {};
+
+	for (let i = 0; i < localStorage.length; i++) {
+		const key = localStorage.key(i);
+		allLocalStorage[key] = localStorage.getItem(key);
+	}
+
+	return JSON.stringify(allLocalStorage);
+}
 
 client.on("General.Custom", (data) => onCustom(data));
 if (configs.twitchSettings.autoUserColor) {
-    client.on("Twitch.ChatMessage", (data) => onTwitchFirstWord(data));
+	client.on("Twitch.ChatMessage", (data) => onTwitchFirstWord(data));
 }
 
 let taskList;
 let userColors = {};
 
 function parseHexColor(hex) {
-    if (typeof hex !== "string") return null;
-    const s = hex.trim();
-    const m = /^#?([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(s);
-    if (!m) return null;
-    let h = m[1].toLowerCase();
-    if (h.length === 3) {
-        h = h
-            .split("")
-            .map((c) => c + c)
-            .join("");
-    }
-    const r = parseInt(h.slice(0, 2), 16);
-    const g = parseInt(h.slice(2, 4), 16);
-    const b = parseInt(h.slice(4, 6), 16);
-    return { r, g, b };
+	if (typeof hex !== "string") return null;
+	const s = hex.trim();
+	const m = /^#?([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(s);
+	if (!m) return null;
+	let h = m[1].toLowerCase();
+	if (h.length === 3) {
+		h = h
+			.split("")
+			.map((c) => c + c)
+			.join("");
+	}
+	const r = parseInt(h.slice(0, 2), 16);
+	const g = parseInt(h.slice(2, 4), 16);
+	const b = parseInt(h.slice(4, 6), 16);
+	return { r, g, b };
 }
 
 function relativeLuminance({ r, g, b }) {
-    const toLinear = (v) => {
-        const s = v / 255;
-        return s <= 0.04045 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
-    };
-    const R = toLinear(r);
-    const G = toLinear(g);
-    const B = toLinear(b);
-    return 0.2126 * R + 0.7152 * G + 0.0722 * B;
+	const toLinear = (v) => {
+		const s = v / 255;
+		return s <= 0.04045 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+	};
+	const R = toLinear(r);
+	const G = toLinear(g);
+	const B = toLinear(b);
+	return 0.2126 * R + 0.7152 * G + 0.0722 * B;
 }
 
-function ensureNotDarkerThan(
-    userHex,
-    minHex = "#555555",
-    fallbackHex = "#ffffff",
-) {
-    const userRgb = parseHexColor(userHex);
-    const minRgb = parseHexColor(minHex);
-    if (!userRgb || !minRgb) return userHex;
-    return relativeLuminance(userRgb) < relativeLuminance(minRgb)
-        ? fallbackHex
-        : userHex;
-}
+async function onTwitchFirstWord(data) {
+	let userColor = data.data.user.color; // hex colour #FF69B4
 
-function onTwitchFirstWord(data) {
-    let userColor = data.data.user.color; // hex colour #FF69B4
+	
 
-    if (userColor == "#000000") {
-        return;
-    }
+	if (userColor != undefined || userColor != 'undefined') {
+		// update localstorage
+		// get id: platform-userID
+		let userId = data.data.user.id;
+		let key = `twitch-${userId}`;
 
-    userColor = ensureNotDarkerThan(userColor, "#888888", "#ffffff");
-
-    // update localstorage
-    // get id: platform-userID
-    let userId = data.data.user.id;
-    let key = `twitch-${userId}`;
-
-    localStorage.setItem(`${key}-color`, userColor);
-    userColors[`${key}-color`] = userColor;
-    return;
+		localStorage.setItem(`${key}-color`, userColor);
+		userColors[`${key}-color`] = userColor;
+	}
+	
+	return;
 }
 
 function onDisconnect() {
-    showConnectionError("Connection Failed: Unable to connect to Streamer.bot");
+	showConnectionError("Connection Failed: Unable to connect to Streamer.bot");
 }
 
 function onError(err) {
@@ -173,17 +170,14 @@ function onCustom(payload) {
 				focused: body.focused,
 			};
 
-			let usernameColor = userColors[id] ?? localStorage.getItem(`${id}-color`);
+			let usernameColor =
+				userColors[id] ?? localStorage.getItem(`${id}-color`);
 
-			if (configs.twitchSettings.autoUserColor && usernameColor != null ) {
+			if (configs.twitchSettings.autoUserColor && usernameColor != undefined && usernameColor != null) {
 				taskPayload["color"] = usernameColor;
 			}
 
-			taskList.addTask(
-				id,
-				taskPayload,
-				username,
-			);
+			taskList.addTask(id, taskPayload, username);
 			break;
 		case "focus":
 			taskList.focusTask(id, body.index, usernameColor);
